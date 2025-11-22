@@ -1,0 +1,10 @@
+# Use Postgres 18 explicitly (not "latest")
+FROM postgres:18
+
+USER root
+
+RUN apt-get update && \
+    apt-get install -y postgresql-18-pgvector && \
+    rm -rf /var/lib/apt/lists/*
+
+USER postgres
