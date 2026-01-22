@@ -1,35 +1,47 @@
-version: '3.8'
+version: "3.8"
 
 services:
   kafka:
-    container_name: kafka
     image: confluentinc/cp-kafka:latest
+    container_name: kafka
     restart: always
+
+    env_file:
+      - .env
+
     environment:
-      # Node / Broker
-      KAFKA_NODE_ID: 1
-      KAFKA_BROKER_ID: 1
+      KAFKA_NODE_ID: ${KAFKA_BROKER_ID}
+      KAFKA_BROKER_ID: ${KAFKA_BROKER_ID}
       KAFKA_PROCESS_ROLES: broker,controller
 
-      # Leader election
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:29093
+      KAFKA_CONTROLLER_QUORUM_VOTERS: ${KAFKA_BROKER_ID}@kafka:${KAFKA_CONTROLLER_PORT}
 
-      # 👇 MUST be on one line or Kafka crashes
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:29093
+      KAFKA_LISTENERS: >
+        PLAINTEXT_INTERNAL://0.0.0.0:${KAFKA_INTERNAL_PORT},
+        PLAINTEXT_EXTERNAL://0.0.0.0:${KAFKA_EXTERNAL_PORT},
+        CONTROLLER://0.0.0.0:${KAFKA_CONTROLLER_PORT}
 
-      # 👇 KafkaJS uses this — must match Docker hostname
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_ADVERTISED_LISTENERS: >
+        PLAINTEXT_INTERNAL://${KAFKA_INTERNAL_HOST}:${KAFKA_INTERNAL_PORT},
+        PLAINTEXT_EXTERNAL://${KAFKA_EXTERNAL_HOST}:${KAFKA_EXTERNAL_PORT}
 
-      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: >
+        PLAINTEXT_INTERNAL:PLAINTEXT,
+        PLAINTEXT_EXTERNAL:PLAINTEXT,
+        CONTROLLER:PLAINTEXT
 
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
+
+      KAFKA_LOG_DIRS: ${KAFKA_LOG_DIRS}
       KAFKA_NUM_PARTITIONS: 1
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
 
     ports:
-      - "9092:9092"
-      - "29093:29093"
+      - "${KAFKA_EXTERNAL_PORT}:${KAFKA_EXTERNAL_PORT}"
+      - "${KAFKA_INTERNAL_PORT}:${KAFKA_INTERNAL_PORT}"
+      - "${KAFKA_CONTROLLER_PORT}:${KAFKA_CONTROLLER_PORT}"
 
     volumes:
       - kafka-data:/var/lib/kafka/data
